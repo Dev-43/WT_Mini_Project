@@ -244,14 +244,129 @@ def dashboard_view(request):
     data = calculate_skill_gap(request.user)
     return render(request, 'core/dashboard.html', {'data': data})
 
+import xml.etree.ElementTree as ET
+from xml.dom import minidom
+from django.utils import timezone
+
 @login_required
 def export_xml_view(request):
-    return HttpResponse("<report></report>", content_type="application/xml")
+    """
+    Export skill mapping report as an XML download.
+    Covers Unit III (XML) requirement of the syllabus.
+    """
+    from .services import calculate_skill_gap
+    data = calculate_skill_gap(request.user)
+    if not data or not data.get('target_role'):
+        messages.warning(request, "Please set a target role before exporting your skill report.")
+        return redirect('role_list')
+
+    root = ET.Element('skillReport')
+
+    # Metadata element
+    meta = ET.SubElement(root, 'metadata')
+    ET.SubElement(meta, 'studentUsername').text = str(request.user.username)
+    ET.SubElement(meta, 'studentEmail').text = str(request.user.email)
+    ET.SubElement(meta, 'college').text = str(request.user.profile.college if hasattr(request.user, 'profile') else 'AISSMS IOIT')
+    ET.SubElement(meta, 'academicYear').text = str(request.user.profile.year if hasattr(request.user, 'profile') else 'Third Year')
+    ET.SubElement(meta, 'targetRole').text = str(data['target_role'].name)
+    ET.SubElement(meta, 'matchPercentage').text = str(data['match_percentage'])
+    ET.SubElement(meta, 'generatedAt').text = timezone.now().isoformat()
+
+    # Summary metrics
+    summary = ET.SubElement(root, 'summary')
+    ET.SubElement(summary, 'totalSkills').text = str(data['counts']['total'])
+    ET.SubElement(summary, 'strongSkills').text = str(data['counts']['strong'])
+    ET.SubElement(summary, 'weakSkills').text = str(data['counts']['weak'])
+    ET.SubElement(summary, 'missingSkills').text = str(data['counts']['missing'])
+    ET.SubElement(summary, 'roadmapCompletion').text = str(data['learning_progress']['percentage'])
+
+    # Skills list
+    skills_el = ET.SubElement(root, 'skills')
+    for s in data['skills']:
+        skill_node = ET.SubElement(skills_el, 'skill')
+        ET.SubElement(skill_node, 'name').text = str(s['skill'].name)
+        ET.SubElement(skill_node, 'category').text = str(s['skill'].category)
+        ET.SubElement(skill_node, 'requiredLevel').text = str(s['required_level'])
+        ET.SubElement(skill_node, 'currentLevel').text = str(s['current_level'])
+        ET.SubElement(skill_node, 'gap').text = str(s['gap'])
+        ET.SubElement(skill_node, 'status').text = str(s['status'])
+        ET.SubElement(skill_node, 'learningStatus').text = str(s['progress_status'])
+
+    # Pretty print XML
+    xml_str = ET.tostring(root, encoding='utf-8')
+    pretty_xml = minidom.parseString(xml_str).toprettyxml(indent="  ", encoding='utf-8')
+
+    response = HttpResponse(pretty_xml, content_type='application/xml')
+    filename = f"skillbridge_report_{request.user.username}_{data['target_role'].name.lower().replace(' ', '_')}.xml"
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
 
 @login_required
 def api_skills_view(request):
-    return JsonResponse({"skills": []})
+    """
+    JSON API endpoint returning the student's catalog skills and current proficiency.
+    Covers Unit IV (Web Services / JSON) requirement.
+    """
+    user_skills_map = {
+        us.skill_id: us.current_level
+        for us in UserSkill.objects.filter(user=request.user)
+    }
+
+    skills_data = []
+    for skill in Skill.objects.all().order_by('category', 'name'):
+        skills_data.append({
+            'id': skill.id,
+            'name': skill.name,
+            'category': skill.category,
+            'current_level': user_skills_map.get(skill.id, 0),
+            'resources_count': skill.resources.count(),
+        })
+
+    return JsonResponse({
+        'status': 'success',
+        'user': request.user.username,
+        'count': len(skills_data),
+        'skills': skills_data
+    }, json_dumps_params={'indent': 2})
 
 @login_required
 def api_result_view(request):
-    return JsonResponse({"results": []})
+    """
+    JSON API endpoint returning real-time gap analysis and readiness metrics.
+    Covers Unit IV (Web Services / JSON) requirement.
+    """
+    from .services import calculate_skill_gap
+    data = calculate_skill_gap(request.user)
+    if not data or not data['target_role']:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No target role selected yet.'
+        }, status=400)
+
+    payload = {
+        'status': 'success',
+        'user': request.user.username,
+        'target_role': {
+            'id': data['target_role'].id,
+            'name': data['target_role'].name,
+            'description': data['target_role'].description,
+        },
+        'match_percentage': data['match_percentage'],
+        'readiness_score': data['readiness_score'],
+        'counts': data['counts'],
+        'learning_progress': data['learning_progress'],
+        'chart_data': data['chart_data'],
+        'skills': [
+            {
+                'name': s['skill'].name,
+                'category': s['skill'].category,
+                'required_level': s['required_level'],
+                'current_level': s['current_level'],
+                'gap': s['gap'],
+                'status': s['status'],
+                'progress_status': s['progress_status'],
+            }
+            for s in data['skills']
+        ]
+    }
+    return JsonResponse(payload, json_dumps_params={'indent': 2})
