@@ -1,0 +1,142 @@
+{% extends 'master.html' %}
+
+{% block title %}Register - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="max-width: 520px; margin: 1.5rem auto;">
+  <div class="card">
+    <div class="card-header" style="justify-content: center; text-align: center; border-bottom: none; margin-bottom: 0.5rem;">
+      <div>
+        <h2 class="card-title" style="font-size: 1.65rem;">Create Your Account</h2>
+        <p class="form-help" style="font-size: 0.95rem; margin-top: 0.25rem;">Start mapping your career readiness today</p>
+      </div>
+    </div>
+
+    <form method="post" id="register-form" novalidate>
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            <div>{{ error }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <div class="form-group">
+        <label for="id_username" class="form-label">Username *</label>
+        {{ form.username }}
+        {% if form.username.errors %}
+          <div class="form-error">{{ form.username.errors.0 }}</div>
+        {% endif %}
+        <div id="username-js-error" class="form-error" style="display:none;"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_email" class="form-label">Email Address *</label>
+        {{ form.email }}
+        {% if form.email.errors %}
+          <div class="form-error">{{ form.email.errors.0 }}</div>
+        {% endif %}
+        <div id="email-js-error" class="form-error" style="display:none;"></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="form-group">
+          <label for="id_college" class="form-label">College / Institute</label>
+          {{ form.college }}
+        </div>
+        <div class="form-group">
+          <label for="id_year" class="form-label">Academic Year</label>
+          {{ form.year }}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_password" class="form-label">Password *</label>
+        {{ form.password }}
+        <p class="form-help">{{ form.password.help_text }}</p>
+        {% if form.password.errors %}
+          <div class="form-error">{{ form.password.errors.0 }}</div>
+        {% endif %}
+        <div id="password-js-error" class="form-error" style="display:none;"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="id_confirm_password" class="form-label">Confirm Password *</label>
+        {{ form.confirm_password }}
+        {% if form.confirm_password.errors %}
+          <div class="form-error">{{ form.confirm_password.errors.0 }}</div>
+        {% endif %}
+        <div id="confirm-js-error" class="form-error" style="display:none;"></div>
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;" id="btn-submit-register">
+        Complete Registration &rarr;
+      </button>
+    </form>
+
+    <div style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+      Already have an account? <a href="{% url 'login' %}" style="color: var(--secondary); font-weight: 600; text-decoration: none;">Sign in here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Client-side validation: empty fields, email format, password matching
+  document.getElementById('register-form').addEventListener('submit', function(e) {
+    let isValid = true;
+    const username = document.getElementById('id_username');
+    const email = document.getElementById('id_email');
+    const pwd = document.getElementById('id_password');
+    const confirm = document.getElementById('id_confirm_password');
+
+    // Reset error messages
+    ['username', 'email', 'password', 'confirm'].forEach(f => {
+      const el = document.getElementById(f + '-js-error');
+      if (el) { el.style.display = 'none'; el.textContent = ''; }
+    });
+
+    if (!username.value.trim()) {
+      showError('username', 'Username cannot be empty.');
+      isValid = false;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.value.trim()) {
+      showError('email', 'Email address is required.');
+      isValid = false;
+    } else if (!emailRegex.test(email.value.trim())) {
+      showError('email', 'Please enter a valid email format.');
+      isValid = false;
+    }
+
+    if (!pwd.value) {
+      showError('password', 'Password cannot be empty.');
+      isValid = false;
+    } else if (pwd.value.length < 6) {
+      showError('password', 'Password must be at least 6 characters.');
+      isValid = false;
+    }
+
+    if (pwd.value !== confirm.value) {
+      showError('confirm', 'Passwords do not match.');
+      isValid = false;
+    }
+
+    if (!isValid) {
+      e.preventDefault();
+    }
+
+    function showError(field, msg) {
+      const el = document.getElementById(field + '-js-error');
+      if (el) {
+        el.textContent = msg;
+        el.style.display = 'block';
+      }
+    }
+  });
+</script>
+{% endblock %}
