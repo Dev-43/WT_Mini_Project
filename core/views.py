@@ -239,7 +239,10 @@ def tracker_view(request):
 
 @login_required
 def dashboard_view(request):
-    return render(request, 'core/home.html')
+    """Personalized dashboard with readiness score, progress bars, and Chart.js visualization."""
+    from .services import calculate_skill_gap
+    data = calculate_skill_gap(request.user)
+    return render(request, 'core/dashboard.html', {'data': data})
 
 @login_required
 def export_xml_view(request):

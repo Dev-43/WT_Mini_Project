@@ -87,6 +87,12 @@ def calculate_skill_gap(user, target_role=None):
     # Readiness score: match percentage boosted by completed gap skills
     readiness_score = match_percentage
 
+    chart_data = {
+        'labels': [s['skill'].name for s in skill_rows],
+        'required': [s['required_level'] for s in skill_rows],
+        'current': [s['current_level'] for s in skill_rows],
+    }
+
     return {
         'target_role': target_role,
         'skills': skill_rows,
@@ -96,6 +102,7 @@ def calculate_skill_gap(user, target_role=None):
         'match_percentage': match_percentage,
         'readiness_score': readiness_score,
         'counts': counts,
+        'chart_data': chart_data,
         'learning_progress': {
             'total_gaps': total_gaps,
             'completed': completed_gaps,
