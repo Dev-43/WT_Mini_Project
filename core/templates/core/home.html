@@ -1,0 +1,53 @@
+{% extends 'master.html' %}
+
+{% block title %}SkillBridge - Career Skill Mapping & Learning Progress Tracker{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <span class="hero-tag">Engineering Career Readiness Platform</span>
+  <h1 class="hero-title">
+    Bridge the Gap Between <br><span class="gradient-text">College & Industry</span>
+  </h1>
+  <p class="hero-subtitle">
+    Evaluate your skills against industry benchmarks, visualize real-time skill gaps, access curated learning resources, and monitor your career readiness all in one place.
+  </p>
+  
+  <div class="hero-actions">
+    {% if user.is_authenticated %}
+      <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg" id="btn-hero-dash">Go to Your Dashboard &rarr;</a>
+      <a href="{% url 'role_list' %}" class="btn btn-secondary btn-lg" id="btn-hero-roles">Explore Job Roles</a>
+    {% else %}
+      <a href="{% url 'register' %}" class="btn btn-primary btn-lg" id="btn-hero-getstarted">Get Started Free &rarr;</a>
+      <a href="{% url 'login' %}" class="btn btn-secondary btn-lg" id="btn-hero-login">Sign In</a>
+    {% endif %}
+  </div>
+</section>
+
+<section class="features-section">
+  <div class="grid-3">
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3 class="feature-title">Role Skill Benchmarks</h3>
+      <p class="feature-desc">
+        Explore curated skill requirements for high-demand engineering careers like Full Stack Developer, Data Analyst, and Android Engineer.
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3 class="feature-title">Gap Analysis & Scoring</h3>
+      <p class="feature-desc">
+        Rate your current abilities and receive an instant readiness score along with visual gap classifications (Strong, Weak, Missing).
+      </p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🚀</div>
+      <h3 class="feature-title">Personalized Tracker</h3>
+      <p class="feature-desc">
+        Access targeted learning resources, update your milestone progress, and export comprehensive XML/JSON reports for your portfolio.
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

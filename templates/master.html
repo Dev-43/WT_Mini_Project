@@ -1,0 +1,97 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}SkillBridge - Career Skill Mapping & Learning Progress Tracker{% endblock %}</title>
+  <meta name="description" content="A web portal for engineering students to map their career skills, identify gap areas, and track self-paced learning progress.">
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+  
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav-wrapper">
+        <a href="{% url 'home' %}" class="brand-logo" id="brand-logo">
+          <div class="brand-icon">SB</div>
+          <div class="brand-name">Skill<span>Bridge</span></div>
+        </a>
+
+        <ul class="nav-links">
+          <li><a href="{% url 'home' %}">Home</a></li>
+          {% if user.is_authenticated %}
+            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'role_list' %}">Roles</a></li>
+            <li><a href="{% url 'assessment' %}">Assessment</a></li>
+            <li><a href="{% url 'result' %}">Results</a></li>
+            <li><a href="{% url 'tracker' %}">Tracker</a></li>
+            <li><a href="{% url 'profile' %}">Profile</a></li>
+            <li>
+              <div class="user-badge">
+                <span>👤</span>
+                <strong>{{ user.username }}</strong>
+              </div>
+            </li>
+            <li>
+              <form action="{% url 'logout' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-secondary btn-sm" id="btn-logout">Logout</button>
+              </form>
+            </li>
+          {% else %}
+            <li><a href="{% url 'role_list' %}">Browse Roles</a></li>
+            <li><a href="{% url 'login' %}" class="btn btn-secondary btn-sm" id="btn-login">Login</a></li>
+            <li><a href="{% url 'register' %}" class="btn btn-primary btn-sm" id="btn-register">Register</a></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Flash Messages -->
+  {% if messages %}
+    <div class="container messages-container">
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags|default:'info' }}">
+          <span>{{ message }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- Main Content Block -->
+  <main class="site-main">
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <strong>SkillBridge</strong> &copy; 2026. All rights reserved.
+          <p style="font-size: 0.8rem; margin-top: 0.25rem;">Career Skill Mapping & Learning Progress Tracker</p>
+        </div>
+        <div>
+          <span class="footer-course-tag">Web Technology (COPCC503) &bull; AISSMS IOIT</span>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Main Script -->
+  <script src="{% static 'core/js/main.js' %}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
