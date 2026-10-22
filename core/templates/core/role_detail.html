@@ -1,0 +1,100 @@
+{% extends 'master.html' %}
+
+{% block title %}{{ role.name }} - Curriculum & Benchmarks - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <a href="{% url 'role_list' %}" style="color: var(--secondary); text-decoration: none; font-size: 0.9rem; font-weight: 600;">
+    &larr; Back to Role Catalog
+  </a>
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 1.5rem; margin-top: 1rem;">
+    <div>
+      <h1 style="font-size: 2.25rem; font-weight: 800; color: #fff;">{{ role.name }}</h1>
+      <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 750px; margin-top: 0.5rem;">
+        {{ role.description }}
+      </p>
+    </div>
+
+    <div>
+      {% if user.is_authenticated %}
+        <form method="post" action="{% url 'role_select' role.id %}">
+          {% csrf_token %}
+          {% if is_target %}
+            <a href="{% url 'assessment' %}" class="btn btn-primary btn-lg">Take Assessment &rarr;</a>
+          {% else %}
+            <button type="submit" class="btn btn-primary btn-lg" id="btn-select-role">
+              Set as Target & Take Assessment &rarr;
+            </button>
+          {% endif %}
+        </form>
+      {% else %}
+        <a href="{% url 'login' %}?next={% url 'role_detail' role.id %}" class="btn btn-primary btn-lg">
+          Sign In to Select Role
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">Required Competencies & Benchmarks</h2>
+      <p class="form-help">Industry standard benchmarks on a scale of 1 (Basic Awareness) to 5 (Mastery)</p>
+    </div>
+    <span class="badge badge-neutral">{{ role_skills|length }} Required Skills</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Skill Name</th>
+          <th>Category</th>
+          <th>Required Level (1–5)</th>
+          <th>Target Benchmark</th>
+          <th>Learning Resources</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for rs in role_skills %}
+          <tr>
+            <td style="font-weight: 600; color: #fff;">{{ rs.skill.name }}</td>
+            <td><span class="badge badge-neutral">{{ rs.skill.category }}</span></td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <strong style="font-size: 1.1rem; color: #a5b4fc;">{{ rs.required_level }}</strong>
+                <div class="progress-bar-container" style="width: 100px; margin: 0;">
+                  <div class="progress-bar-fill level-{{ rs.required_level }}"></div>
+                </div>
+              </div>
+            </td>
+            <td style="font-size: 0.85rem; color: var(--text-muted);">
+              {% if rs.required_level >= 5 %}
+                Advanced / Production Mastery
+              {% elif rs.required_level >= 4 %}
+                Proficient / Autonomous Implementation
+              {% elif rs.required_level >= 3 %}
+                Intermediate / Working Knowledge
+              {% else %}
+                Foundational Understanding
+              {% endif %}
+            </td>
+            <td>
+              <span style="font-size: 0.85rem; color: var(--secondary);">
+                {{ rs.skill.resources.count }} Available
+              </span>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+              No skills mapped to this role yet.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

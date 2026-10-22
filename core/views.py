@@ -88,12 +88,43 @@ def profile_view(request):
 
     return render(request, 'core/profile.html', {'form': form, 'profile': profile})
 
-# Placeholders for steps 6-12 (to be implemented next)
 def role_list_view(request):
-    return render(request, 'core/home.html')
+    """Browse all available career roles."""
+    roles = Role.objects.prefetch_related('role_skills__skill').all()
+    current_target_role = None
+    if request.user.is_authenticated:
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        current_target_role = profile.target_role
+
+    return render(request, 'core/role_list.html', {
+        'roles': roles,
+        'current_target_role': current_target_role
+    })
 
 def role_detail_view(request, role_id):
-    return render(request, 'core/home.html')
+    """View detailed competency benchmarks for a role."""
+    role = get_object_or_404(Role, id=role_id)
+    role_skills = role.role_skills.select_related('skill').prefetch_related('skill__resources').order_by('-required_level', 'skill__name')
+    is_target = False
+    if request.user.is_authenticated:
+        profile, _ = Profile.objects.get_or_create(user=request.user)
+        is_target = (profile.target_role_id == role.id)
+
+    return render(request, 'core/role_detail.html', {
+        'role': role,
+        'role_skills': role_skills,
+        'is_target': is_target
+    })
+
+@login_required
+def role_select_view(request, role_id):
+    """Set the specified role as the student's target role."""
+    role = get_object_or_404(Role, id=role_id)
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    profile.target_role = role
+    profile.save()
+    messages.success(request, f"Target role set to '{role.name}'. Let's assess your skills!")
+    return redirect('assessment')
 
 @login_required
 def assessment_view(request):

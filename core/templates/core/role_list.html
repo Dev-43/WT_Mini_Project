@@ -1,0 +1,86 @@
+{% extends 'master.html' %}
+
+{% block title %}Career Roles - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <span class="hero-tag">Industry Career Tracks</span>
+  <h1 style="font-size: 2.25rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Explore Target Roles</h1>
+  <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 700px;">
+    Select an engineering career track to view its prerequisite skill benchmarks and map your personal readiness.
+  </p>
+</div>
+
+{% if user.is_authenticated and current_target_role %}
+  <div class="card" style="margin-bottom: 2rem; border-color: rgba(79, 70, 229, 0.4); background: rgba(79, 70, 229, 0.08);">
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <span class="badge badge-strong">Active Target</span>
+        <h3 style="font-size: 1.3rem; font-weight: 700; color: #fff; margin-top: 0.35rem;">
+          {{ current_target_role.name }}
+        </h3>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">
+          You are currently tracking this role. You can re-assess your skills or choose a different track anytime.
+        </p>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <a href="{% url 'role_detail' current_target_role.id %}" class="btn btn-secondary btn-sm">View Curriculum</a>
+        <a href="{% url 'assessment' %}" class="btn btn-primary btn-sm">Take Assessment &rarr;</a>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+<div class="grid-3">
+  {% for role in roles %}
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+      <div>
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 1rem;">
+          <h3 style="font-size: 1.25rem; font-weight: 700; color: #fff;">{{ role.name }}</h3>
+          {% if user.is_authenticated and current_target_role.id == role.id %}
+            <span class="badge badge-strong">Selected</span>
+          {% endif %}
+        </div>
+        
+        <p style="color: var(--text-muted); font-size: 0.925rem; line-height: 1.5; margin-bottom: 1.5rem;">
+          {{ role.description|truncatewords:28 }}
+        </p>
+
+        <div style="margin-bottom: 1.5rem; padding-top: 0.75rem; border-top: 1px solid var(--border-light);">
+          <div style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 0.5rem;">
+            Key Required Skills ({{ role.role_skills.count }})
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.4rem;">
+            {% for rs in role.role_skills.all|slice:":5" %}
+              <span class="badge badge-neutral" style="font-size: 0.75rem;">{{ rs.skill.name }}</span>
+            {% endfor %}
+            {% if role.role_skills.count > 5 %}
+              <span class="badge badge-neutral" style="font-size: 0.75rem;">+{{ role.role_skills.count|add:"-5" }} more</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 0.75rem; border-top: 1px solid var(--border-light); padding-top: 1.25rem;">
+        <a href="{% url 'role_detail' role.id %}" class="btn btn-secondary btn-sm" style="flex: 1;">
+          Details & Curriculum
+        </a>
+        {% if user.is_authenticated %}
+          <form method="post" action="{% url 'role_select' role.id %}" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn {% if current_target_role.id == role.id %}btn-accent{% else %}btn-primary{% endif %} btn-sm">
+              {% if current_target_role.id == role.id %}Re-select{% else %}Select Role{% endif %}
+            </button>
+          </form>
+        {% else %}
+          <a href="{% url 'login' %}?next={% url 'role_list' %}" class="btn btn-primary btn-sm">Select</a>
+        {% endif %}
+      </div>
+    </div>
+  {% empty %}
+    <div class="card" style="grid-column: 1 / -1; text-align: center; padding: 3rem;">
+      <p style="color: var(--text-muted);">No career roles configured yet.</p>
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}
