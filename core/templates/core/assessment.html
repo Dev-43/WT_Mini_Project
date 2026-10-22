@@ -1,0 +1,216 @@
+{% extends 'master.html' %}
+
+{% block title %}Skill Self-Assessment - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <span class="hero-tag">Self-Evaluation</span>
+  <h1 style="font-size: 2.25rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Skill Competency Assessment</h1>
+  <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 750px;">
+    Rate your current proficiency for each prerequisite skill of your target role: <strong style="color: #fff;">{{ target_role.name }}</strong>.
+  </p>
+</div>
+
+<div class="card" style="margin-bottom: 2rem;">
+  <div class="card-header">
+    <div>
+      <h2 class="card-title">{{ target_role.name }} &bull; Evaluation Matrix</h2>
+      <p class="form-help">Proficiency Scale: 0 = None / Unfamiliar &bull; 1 = Foundational &bull; 2 = Beginner &bull; 3 = Intermediate &bull; 4 = Advanced &bull; 5 = Industry Mastery</p>
+    </div>
+    <div style="display: flex; gap: 0.75rem;">
+      <button type="button" class="btn btn-secondary btn-sm" id="btn-add-custom-skill">
+        + Add Extra Skill
+      </button>
+      <a href="{% url 'role_list' %}" class="btn btn-secondary btn-sm">Change Role</a>
+    </div>
+  </div>
+
+  <form method="post" id="assessment-form">
+    {% csrf_token %}
+
+    <div class="table-responsive">
+      <table class="data-table" id="assessment-table">
+        <thead>
+          <tr>
+            <th style="width: 25%;">Skill Name</th>
+            <th style="width: 15%;">Category</th>
+            <th style="width: 15%;">Required Level</th>
+            <th style="width: 35%;">Your Current Rating (0 - 5)</th>
+            <th style="width: 10%; text-align: center;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="assessment-tbody">
+          {% for item in skill_items %}
+            <tr data-skill-id="{{ item.skill.id }}">
+              <td>
+                <input type="hidden" name="skill_id" value="{{ item.skill.id }}">
+                <strong style="color: #fff; font-size: 1rem;">{{ item.skill.name }}</strong>
+              </td>
+              <td>
+                <span class="badge badge-neutral">{{ item.skill.category }}</span>
+              </td>
+              <td>
+                <span class="badge badge-neutral" style="font-size: 0.85rem; color: #a5b4fc; border-color: rgba(99, 102, 241, 0.4);">
+                  Level {{ item.required_level }} / 5
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <input 
+                    type="range" 
+                    name="rating_{{ item.skill.id }}" 
+                    id="slider_{{ item.skill.id }}" 
+                    class="skill-slider" 
+                    min="0" 
+                    max="5" 
+                    step="1" 
+                    value="{{ item.current_level }}"
+                    style="flex: 1; accent-color: var(--primary); cursor: pointer;"
+                  >
+                  <span 
+                    class="badge rating-badge" 
+                    id="badge_{{ item.skill.id }}" 
+                    style="min-width: 80px; text-align: center; justify-content: center; font-size: 0.825rem;"
+                  >
+                    Level {{ item.current_level }}
+                  </span>
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">Core Role</span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Hidden template data for dynamically added skills -->
+    <template id="available-skills-options">
+      {% for s in all_other_skills %}
+        <option value="{{ s.id }}">{{ s.name }} ({{ s.category }})</option>
+      {% endfor %}
+    </template>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; flex-wrap: wrap; gap: 1rem;">
+      <div style="color: var(--text-muted); font-size: 0.9rem;">
+        Tip: Ratings automatically update your gap analysis and unlock targeted learning paths.
+      </div>
+      <div style="display: flex; gap: 1rem;">
+        <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-assessment">
+          Save Ratings & View Gap Analysis &rarr;
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Proficiency label helper
+  function updateRatingBadge(slider, badge) {
+    const val = parseInt(slider.value, 10);
+    const labels = ["0 - None", "1 - Novice", "2 - Beginner", "3 - Intermediate", "4 - Advanced", "5 - Expert"];
+    badge.textContent = labels[val] || ("Level " + val);
+    
+    if (val >= 4) {
+      badge.className = "badge badge-strong rating-badge";
+    } else if (val >= 2) {
+      badge.className = "badge badge-weak rating-badge";
+    } else if (val === 0) {
+      badge.className = "badge badge-missing rating-badge";
+    } else {
+      badge.className = "badge badge-weak rating-badge";
+    }
+  }
+
+  // Initialize all existing sliders
+  document.querySelectorAll('.skill-slider').forEach(slider => {
+    const skillId = slider.id.replace('slider_', '');
+    const badge = document.getElementById('badge_' + skillId);
+    if (badge) {
+      updateRatingBadge(slider, badge);
+      slider.addEventListener('input', () => updateRatingBadge(slider, badge));
+    }
+  });
+
+  // Dynamic Row Addition using DOM
+  const addBtn = document.getElementById('btn-add-custom-skill');
+  const tbody = document.getElementById('assessment-tbody');
+  const optionsTemplate = document.getElementById('available-skills-options');
+
+  if (addBtn && tbody && optionsTemplate) {
+    let customIndex = 1000;
+    addBtn.addEventListener('click', () => {
+      customIndex++;
+      const tr = document.createElement('tr');
+      tr.className = 'dynamic-custom-row';
+      tr.innerHTML = `
+        <td>
+          <select name="custom_skill_id" class="form-control" style="padding: 0.4rem 0.6rem; font-size: 0.85rem;" required>
+            <option value="" disabled selected>-- Select Additional Skill --</option>
+            ${optionsTemplate.innerHTML}
+          </select>
+        </td>
+        <td>
+          <span class="badge badge-neutral">Elective / Custom</span>
+        </td>
+        <td>
+          <span class="badge badge-neutral" style="font-size: 0.85rem; color: #a5b4fc;">Elective</span>
+        </td>
+        <td>
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <input 
+              type="range" 
+              name="custom_rating_${customIndex}" 
+              id="slider_custom_${customIndex}" 
+              class="skill-slider" 
+              min="0" 
+              max="5" 
+              step="1" 
+              value="1"
+              style="flex: 1; accent-color: var(--primary); cursor: pointer;"
+            >
+            <span 
+              class="badge rating-badge" 
+              id="badge_custom_${customIndex}" 
+              style="min-width: 80px; text-align: center; justify-content: center; font-size: 0.825rem;"
+            >
+              1 - Novice
+            </span>
+          </div>
+        </td>
+        <td style="text-align: center;">
+          <button type="button" class="btn btn-danger btn-sm btn-remove-row" style="padding: 0.25rem 0.6rem; font-size: 0.75rem;">
+            Remove
+          </button>
+        </td>
+      `;
+
+      tbody.appendChild(tr);
+
+      const newSlider = tr.querySelector('.skill-slider');
+      const newBadge = tr.querySelector('.rating-badge');
+      updateRatingBadge(newSlider, newBadge);
+      newSlider.addEventListener('input', () => updateRatingBadge(newSlider, newBadge));
+
+      tr.querySelector('.btn-remove-row').addEventListener('click', () => {
+        tr.remove();
+      });
+    });
+  }
+
+  // Client-side form check
+  document.getElementById('assessment-form').addEventListener('submit', function(e) {
+    const customSelects = document.querySelectorAll('select[name="custom_skill_id"]');
+    for (const select of customSelects) {
+      if (!select.value) {
+        alert('Please select a skill for all custom skill rows or remove empty rows.');
+        e.preventDefault();
+        return;
+      }
+    }
+  });
+</script>
+{% endblock %}

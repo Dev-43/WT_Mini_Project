@@ -128,7 +128,72 @@ def role_select_view(request, role_id):
 
 @login_required
 def assessment_view(request):
-    return render(request, 'core/home.html')
+    """Rate skills for the student's target role."""
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if not profile.target_role:
+        messages.warning(request, "Please choose a target career role before taking your self-assessment.")
+        return redirect('role_list')
+
+    target_role = profile.target_role
+    role_skills = target_role.role_skills.select_related('skill').all()
+
+    if request.method == 'POST':
+        # Process standard role skills
+        skill_ids = request.POST.getlist('skill_id')
+        for sid in skill_ids:
+            try:
+                rating = int(request.POST.get(f'rating_{sid}', 0))
+                rating = max(0, min(5, rating))  # clamp between 0 and 5
+                skill = Skill.objects.get(id=sid)
+                UserSkill.objects.update_or_create(
+                    user=request.user,
+                    skill=skill,
+                    defaults={'current_level': rating}
+                )
+            except (ValueError, Skill.DoesNotExist):
+                continue
+
+        # Process dynamic custom skills if added
+        custom_skill_ids = request.POST.getlist('custom_skill_id')
+        for idx, csid in enumerate(custom_skill_ids, start=1001):
+            try:
+                custom_rating = int(request.POST.get(f'custom_rating_{idx}', 1))
+                custom_rating = max(0, min(5, custom_rating))
+                skill = Skill.objects.get(id=csid)
+                UserSkill.objects.update_or_create(
+                    user=request.user,
+                    skill=skill,
+                    defaults={'current_level': custom_rating}
+                )
+            except (ValueError, Skill.DoesNotExist):
+                continue
+
+        messages.success(request, f"Your assessment for '{target_role.name}' has been saved successfully!")
+        return redirect('result')
+
+    # GET request
+    user_skills_dict = {
+        us.skill_id: us.current_level
+        for us in UserSkill.objects.filter(user=request.user)
+    }
+
+    skill_items = []
+    target_skill_ids = set()
+    for rs in role_skills:
+        target_skill_ids.add(rs.skill_id)
+        skill_items.append({
+            'skill': rs.skill,
+            'required_level': rs.required_level,
+            'current_level': user_skills_dict.get(rs.skill_id, 0),
+        })
+
+    all_other_skills = Skill.objects.exclude(id__in=target_skill_ids).order_by('category', 'name')
+
+    return render(request, 'core/assessment.html', {
+        'target_role': target_role,
+        'skill_items': skill_items,
+        'all_other_skills': all_other_skills,
+    })
 
 @login_required
 def result_view(request):
