@@ -209,7 +209,33 @@ def result_view(request):
 
 @login_required
 def tracker_view(request):
-    return render(request, 'core/home.html')
+    """Learning tracker per gap skill with resources, status, and study notes."""
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if not profile.target_role:
+        messages.warning(request, "Please choose a target career role to access the learning tracker.")
+        return redirect('role_list')
+
+    if request.method == 'POST':
+        skill_id = request.POST.get('skill_id')
+        status = request.POST.get('status', 'Not started')
+        notes = request.POST.get('notes', '').strip()
+
+        try:
+            skill = Skill.objects.get(id=skill_id)
+            Progress.objects.update_or_create(
+                user=request.user,
+                skill=skill,
+                defaults={'status': status, 'notes': notes}
+            )
+            messages.success(request, f"Learning progress updated for '{skill.name}'.")
+        except Skill.DoesNotExist:
+            messages.error(request, "Invalid skill selected.")
+
+        return redirect('tracker')
+
+    from .services import calculate_skill_gap
+    data = calculate_skill_gap(request.user)
+    return render(request, 'core/tracker.html', {'data': data})
 
 @login_required
 def dashboard_view(request):

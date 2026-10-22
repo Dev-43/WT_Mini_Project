@@ -1,0 +1,167 @@
+{% extends 'master.html' %}
+
+{% block title %}Learning Progress Tracker - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <span class="hero-tag">Personalized Study Plan</span>
+  <h1 style="font-size: 2.25rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Targeted Learning Tracker</h1>
+  <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 750px;">
+    Actionable study resources and milestone tracking for skills with identified proficiency gaps in <strong style="color: #fff;">{{ data.target_role.name }}</strong>.
+  </p>
+</div>
+
+<!-- Tracker Summary Banner -->
+<div class="card" style="margin-bottom: 2.5rem; background: rgba(17, 24, 39, 0.7); border-color: rgba(99, 102, 241, 0.3);">
+  <div class="grid-3" style="align-items: center;">
+    <div>
+      <span style="font-size: 0.85rem; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Learning Roadmap Completion</span>
+      <div style="font-size: 2.5rem; font-weight: 800; color: #fff; margin-top: 0.25rem;">
+        {{ data.learning_progress.percentage }}%
+      </div>
+      <div class="progress-bar-container" style="height: 8px; margin-top: 0.5rem;">
+        <div class="progress-bar-fill tracker-roadmap-fill" data-percentage="{{ data.learning_progress.percentage }}"></div>
+      </div>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem;">
+        {{ data.learning_progress.completed }} of {{ data.learning_progress.total_gaps }} gap skills marked as Done
+      </p>
+    </div>
+
+    <div style="border-left: 1px solid var(--border-light); padding-left: 1.5rem;">
+      <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.25rem;">Roadmap Milestones:</div>
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <span class="badge badge-strong">&#10003; {{ data.learning_progress.completed }} Done</span>
+        <span class="badge badge-weak">&#9654; {{ data.learning_progress.in_progress }} In Progress</span>
+        <span class="badge badge-missing">&#9675; {{ data.learning_progress.not_started }} Not Started</span>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+      <a href="{% url 'result' %}" class="btn btn-secondary btn-sm">&larr; Gap Matrix</a>
+      <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm">Full Dashboard &rarr;</a>
+    </div>
+  </div>
+</div>
+
+{% if not data.gap_skills %}
+  <div class="card" style="text-align: center; padding: 4rem 2rem;">
+    <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+    <h2 style="font-size: 1.75rem; font-weight: 800; color: #fff; margin-bottom: 0.5rem;">Outstanding! Zero Skill Gaps Detected</h2>
+    <p style="color: var(--text-muted); max-width: 600px; margin: 0 auto 1.5rem;">
+      Your self-assessed skills currently meet or exceed all industry prerequisites for <strong>{{ data.target_role.name }}</strong>.
+    </p>
+    <div style="display: flex; justify-content: center; gap: 1rem;">
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">View Readiness Dashboard</a>
+      <a href="{% url 'role_list' %}" class="btn btn-secondary">Explore Other Career Roles</a>
+    </div>
+  </div>
+{% else %}
+  <div style="display: flex; flex-direction: column; gap: 1.75rem;">
+    {% for s in data.gap_skills %}
+      <div class="card" id="skill-{{ s.skill.id }}" style="border-left: 4px solid var(--primary);">
+        <div class="card-header" style="flex-wrap: wrap; gap: 1rem;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <h3 style="font-size: 1.3rem; font-weight: 700; color: #fff;">{{ s.skill.name }}</h3>
+              <span class="badge badge-neutral">{{ s.skill.category }}</span>
+              <span class="badge {{ s.badge_class }}">{{ s.status }}</span>
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.35rem;">
+              Required: <strong style="color: #a5b4fc;">Level {{ s.required_level }}</strong> &bull; 
+              Current: <strong style="color: #fff;">Level {{ s.current_level }}</strong> &bull; 
+              Identified Gap: <span class="gap-positive" style="font-weight: 700;">{{ s.gap }} Level{% if s.gap > 1 %}s{% endif %}</span>
+            </div>
+          </div>
+
+          <div>
+            <span class="badge {% if s.progress_status == 'Done' %}badge-strong{% elif s.progress_status == 'In progress' %}badge-weak{% else %}badge-neutral{% endif %}" style="font-size: 0.85rem;">
+              Status: {{ s.progress_status }}
+            </span>
+          </div>
+        </div>
+
+        <div class="grid-2" style="gap: 2rem;">
+          <!-- Left Column: Curated Learning Resources -->
+          <div>
+            <h4 style="font-size: 0.95rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 0.75rem;">
+              Curated Study Resources ({{ s.resources|length }})
+            </h4>
+            <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+              {% for res in s.resources %}
+                <a 
+                  href="{{ res.link }}" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  style="display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem; background: var(--bg-input); border: 1px solid var(--border-light); border-radius: var(--radius-sm); text-decoration: none; color: #fff; transition: var(--transition);"
+                  onmouseover="this.style.borderColor='var(--primary)'"
+                  onmouseout="this.style.borderColor='var(--border-light)'"
+                >
+                  <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    <span style="font-size: 1.1rem;">
+                      {% if res.type == 'Video' %}📺
+                      {% elif res.type == 'Course' %}🎓
+                      {% elif res.type == 'Book' %}📚
+                      {% else %}📄{% endif %}
+                    </span>
+                    <div>
+                      <div style="font-size: 0.9rem; font-weight: 600;">{{ res.title }}</div>
+                      <span style="font-size: 0.75rem; color: var(--text-muted);">{{ res.type }}</span>
+                    </div>
+                  </div>
+                  <span style="color: var(--secondary); font-size: 0.85rem;">Visit &nearr;</span>
+                </a>
+              {% empty %}
+                <p style="font-size: 0.85rem; color: var(--text-muted);">No curated resources mapped yet.</p>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Right Column: Student Learning Progress Form -->
+          <div style="background: rgba(255, 255, 255, 0.02); padding: 1.25rem; border-radius: var(--radius-sm); border: 1px solid var(--border-light);">
+            <form method="post" action="{% url 'tracker' %}">
+              {% csrf_token %}
+              <input type="hidden" name="skill_id" value="{{ s.skill.id }}">
+
+              <div class="form-group">
+                <label class="form-label">Learning Status</label>
+                <select name="status" class="form-control" style="font-size: 0.9rem;">
+                  <option value="Not started" {% if s.progress_status == 'Not started' %}selected{% endif %}>Not started</option>
+                  <option value="In progress" {% if s.progress_status == 'In progress' %}selected{% endif %}>In progress</option>
+                  <option value="Done" {% if s.progress_status == 'Done' %}selected{% endif %}>Done</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Learning Notes / Project Evidence</label>
+                <textarea 
+                  name="notes" 
+                  class="form-control" 
+                  rows="3" 
+                  placeholder="e.g. Completed Chapter 4, deployed sample project to GitHub..."
+                  style="font-size: 0.875rem;"
+                >{{ s.progress_notes }}</textarea>
+              </div>
+
+              <div style="text-align: right;">
+                <button type="submit" class="btn btn-primary btn-sm">
+                  Save Progress
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.tracker-roadmap-fill').forEach(bar => {
+    if (bar.dataset.percentage) {
+      bar.style.width = bar.dataset.percentage + '%';
+    }
+  });
+</script>
+{% endblock %}
