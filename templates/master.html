@@ -10,8 +10,13 @@
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
   
-  <!-- Chart.js via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Chart.js (Local offline bundle with CDN fallback) -->
+  <script src="{% static 'core/js/chart.umd.min.js' %}"></script>
+  <script>
+    if (typeof Chart === 'undefined') {
+      document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"><\/script>');
+    }
+  </script>
   
   {% block extra_head %}{% endblock %}
 </head>
