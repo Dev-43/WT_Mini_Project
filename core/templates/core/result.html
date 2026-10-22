@@ -1,0 +1,275 @@
+{% extends 'master.html' %}
+
+{% block title %}Skill Mapping & Gap Analysis - SkillBridge{% endblock %}
+
+{% block content %}
+<div style="margin-bottom: 2rem;">
+  <span class="hero-tag">Gap Analysis</span>
+  <h1 style="font-size: 2.25rem; font-weight: 800; color: #fff; margin-top: 0.5rem;">Skill Mapping & Role Readiness</h1>
+  <p style="color: var(--text-muted); font-size: 1.05rem; max-width: 750px;">
+    Comparative gap matrix for your target role: <strong style="color: #fff;">{{ data.target_role.name }}</strong>.
+  </p>
+</div>
+
+<!-- Match Overview Banner -->
+<div class="card" style="margin-bottom: 2rem; background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(14, 165, 233, 0.1)); border-color: rgba(99, 102, 241, 0.3);">
+  <div class="grid-4" style="align-items: center;">
+    <div>
+      <span style="font-size: 0.85rem; color: #a5b4fc; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600;">Overall Role Match</span>
+      <div style="font-size: 3rem; font-weight: 800; color: #fff; line-height: 1.1; margin-top: 0.25rem;">
+        <span id="live-match-percentage">{{ data.match_percentage }}</span>%
+      </div>
+      <div class="progress-bar-container" style="height: 10px; margin-top: 0.5rem;">
+        <div class="progress-bar-fill" id="live-match-progress-bar" data-percentage="{{ data.match_percentage }}"></div>
+      </div>
+    </div>
+
+    <div style="text-align: center; border-left: 1px solid var(--border-light); padding: 0.5rem 1rem;">
+      <span class="badge badge-strong" style="font-size: 0.85rem;">Strong Competencies</span>
+      <div style="font-size: 2.25rem; font-weight: 800; color: #34d399; margin-top: 0.35rem;" id="count-strong">
+        {{ data.counts.strong }}
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Current &ge; Required</span>
+    </div>
+
+    <div style="text-align: center; border-left: 1px solid var(--border-light); padding: 0.5rem 1rem;">
+      <span class="badge badge-weak" style="font-size: 0.85rem;">Weak (Needs Focus)</span>
+      <div style="font-size: 2.25rem; font-weight: 800; color: #fbbf24; margin-top: 0.35rem;" id="count-weak">
+        {{ data.counts.weak }}
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">1 &le; Current &lt; Required</span>
+    </div>
+
+    <div style="text-align: center; border-left: 1px solid var(--border-light); padding: 0.5rem 1rem;">
+      <span class="badge badge-missing" style="font-size: 0.85rem;">Missing (Unrated)</span>
+      <div style="font-size: 2.25rem; font-weight: 800; color: #f87171; margin-top: 0.35rem;" id="count-missing">
+        {{ data.counts.missing }}
+      </div>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">Current = 0</span>
+    </div>
+  </div>
+</div>
+
+<!-- Controls and Filter Bar -->
+<div class="card" style="margin-bottom: 2rem;">
+  <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+    <div>
+      <h2 class="card-title" style="margin-bottom: 0.25rem;">Skills Evaluation Table</h2>
+      <p class="form-help">Edit current proficiency inline to simulate live percentage changes or filter by status</p>
+    </div>
+
+    <!-- Filter Buttons (JS Live Filter without page reload) -->
+    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;" id="filter-buttons-group">
+      <button type="button" class="btn btn-secondary btn-sm active-filter" data-filter="all" id="filter-all">
+        All ({{ data.counts.total }})
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" data-filter="Missing" id="filter-missing">
+        Missing ({{ data.counts.missing }})
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" data-filter="Weak" id="filter-weak">
+        Weak ({{ data.counts.weak }})
+      </button>
+      <button type="button" class="btn btn-secondary btn-sm" data-filter="Strong" id="filter-strong">
+        Strong ({{ data.counts.strong }})
+      </button>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="data-table" id="result-table">
+      <thead>
+        <tr>
+          <th>Skill</th>
+          <th>Category</th>
+          <th style="text-align: center;">Required Level</th>
+          <th style="text-align: center;">Current Level (Inline Edit)</th>
+          <th style="text-align: center;">Gap</th>
+          <th style="text-align: center;">Status</th>
+          <th style="text-align: center;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="result-tbody">
+        {% for s in data.skills %}
+          <tr class="result-row" data-status="{{ s.status }}" data-skill-id="{{ s.skill.id }}" data-required="{{ s.required_level }}">
+            <td>
+              <strong style="color: #fff; font-size: 0.95rem;">{{ s.skill.name }}</strong>
+            </td>
+            <td>
+              <span class="badge badge-neutral">{{ s.skill.category }}</span>
+            </td>
+            <td style="text-align: center;">
+              <span style="font-weight: 700; color: #a5b4fc; font-size: 1.05rem;">
+                {{ s.required_level }}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              <div style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                <select class="form-control inline-level-select" style="width: 70px; padding: 0.3rem 0.5rem; text-align: center;" data-skill-id="{{ s.skill.id }}" data-required="{{ s.required_level }}">
+                  {% for lvl in "012345" %}
+                    <option value="{{ lvl }}" {% if s.current_level|slugify == lvl %}selected{% endif %}>
+                      {{ lvl }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+            </td>
+            <td style="text-align: center;">
+              <strong class="cell-gap {% if s.gap > 0 %}gap-positive{% else %}gap-zero{% endif %}" style="font-size: 1.1rem;">
+                {{ s.gap }}
+              </strong>
+            </td>
+            <td style="text-align: center;">
+              <span class="badge {{ s.badge_class }} cell-status">
+                {{ s.status }}
+              </span>
+            </td>
+            <td style="text-align: center;">
+              {% if s.gap > 0 %}
+                <a href="{% url 'tracker' %}#skill-{{ s.skill.id }}" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
+                  Study Resources &rarr;
+                </a>
+              {% else %}
+                <span style="color: #34d399; font-size: 0.85rem;">&#10003; Target Met</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+              No skill assessment records found. <a href="{% url 'assessment' %}" style="color: var(--secondary);">Take the assessment now</a>.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{% url 'export_xml' %}" class="btn btn-secondary btn-sm" id="btn-export-xml">
+        📥 Export XML Skill Report
+      </a>
+      <a href="{% url 'api_result' %}" target="_blank" class="btn btn-secondary btn-sm">
+        🔗 View JSON API Data
+      </a>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem;">
+      <a href="{% url 'assessment' %}" class="btn btn-secondary btn-sm">Retake Full Assessment</a>
+      <a href="{% url 'tracker' %}" class="btn btn-primary btn-sm">Go to Learning Tracker &rarr;</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Initialize match percentage bar width from data attribute
+  const initialBar = document.getElementById('live-match-progress-bar');
+  if (initialBar && initialBar.dataset.percentage) {
+    initialBar.style.width = initialBar.dataset.percentage + '%';
+  }
+
+  // Step 11 pass: Live filtering without reload and live match percentage recalculation
+  const filterButtons = document.querySelectorAll('#filter-buttons-group button');
+  const rows = document.querySelectorAll('.result-row');
+
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterButtons.forEach(b => b.classList.remove('active-filter', 'btn-primary'));
+      btn.classList.add('active-filter');
+
+      const filter = btn.getAttribute('data-filter');
+      rows.forEach(row => {
+        const rowStatus = row.getAttribute('data-status');
+        if (filter === 'all' || rowStatus === filter) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    });
+  });
+
+  // Live Inline Rating Edit & Dynamic Match Recalculation (using CSRF & AJAX or client DOM)
+  const inlineSelects = document.querySelectorAll('.inline-level-select');
+  inlineSelects.forEach(select => {
+    select.addEventListener('change', () => {
+      recalculateLiveStats();
+
+      // Send background update to persist the inline rating change
+      const skillId = select.getAttribute('data-skill-id');
+      const newLevel = select.value;
+
+      const formData = new FormData();
+      formData.append('skill_id', skillId);
+      formData.append('rating_' + skillId, newLevel);
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+      fetch("{% url 'assessment' %}", {
+        method: 'POST',
+        body: formData,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).catch(err => console.error('Inline update failed:', err));
+    });
+  });
+
+  function recalculateLiveStats() {
+    let totalRequired = 0;
+    let totalAchieved = 0;
+    let strongCount = 0;
+    let weakCount = 0;
+    let missingCount = 0;
+
+    rows.forEach(row => {
+      const req = parseInt(row.getAttribute('data-required'), 10);
+      const select = row.querySelector('.inline-level-select');
+      const cur = parseInt(select.value, 10);
+      const gap = Math.max(0, req - cur);
+
+      totalRequired += req;
+      totalAchieved += Math.min(cur, req);
+
+      const gapCell = row.querySelector('.cell-gap');
+      const statusCell = row.querySelector('.cell-status');
+
+      gapCell.textContent = gap;
+      gapCell.style.color = gap > 0 ? '#f87171' : '#34d399';
+
+      let newStatus = 'Missing';
+      let newBadgeClass = 'badge-missing';
+
+      if (cur >= req) {
+        newStatus = 'Strong';
+        newBadgeClass = 'badge-strong';
+        strongCount++;
+      } else if (cur >= 1) {
+        newStatus = 'Weak';
+        newBadgeClass = 'badge-weak';
+        weakCount++;
+      } else {
+        missingCount++;
+      }
+
+      row.setAttribute('data-status', newStatus);
+      statusCell.textContent = newStatus;
+      statusCell.className = 'badge ' + newBadgeClass + ' cell-status';
+    });
+
+    const newPercentage = totalRequired > 0 ? (totalAchieved / totalRequired * 100).toFixed(1) : 0;
+    const percentageEl = document.getElementById('live-match-percentage');
+    const progressBar = document.getElementById('live-match-progress-bar');
+
+    if (percentageEl) percentageEl.textContent = newPercentage;
+    if (progressBar) progressBar.style.width = newPercentage + '%';
+
+    const cStrong = document.getElementById('count-strong');
+    const cWeak = document.getElementById('count-weak');
+    const cMissing = document.getElementById('count-missing');
+
+    if (cStrong) cStrong.textContent = strongCount;
+    if (cWeak) cWeak.textContent = weakCount;
+    if (cMissing) cMissing.textContent = missingCount;
+  }
+</script>
+{% endblock %}

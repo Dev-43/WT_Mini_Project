@@ -197,7 +197,15 @@ def assessment_view(request):
 
 @login_required
 def result_view(request):
-    return render(request, 'core/home.html')
+    """Skill mapping result page with gap analysis and match percentage."""
+    profile, _ = Profile.objects.get_or_create(user=request.user)
+    if not profile.target_role:
+        messages.warning(request, "Please choose a target career role to view your skill mapping result.")
+        return redirect('role_list')
+
+    from .services import calculate_skill_gap
+    data = calculate_skill_gap(request.user)
+    return render(request, 'core/result.html', {'data': data})
 
 @login_required
 def tracker_view(request):
